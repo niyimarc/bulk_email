@@ -14,18 +14,31 @@ whatsapp_number = os.environ.get('WHATSAPP_NUMBER')
 contact_email = os.environ.get('CONTACT_EMAIL')
 from_email = business_name + "<" + get_from_email + ">"
 
+def get_email_content(file_path, context):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        email_content = file.read()
+
+    # Replace placeholders with actual values
+    email_content = email_content.format(**context)
+
+    return email_content
+
+
 def send_email_view(request, pk):
     breader = get_object_or_404(Breader, pk=pk)
     # Reset the is_email_sent field to False before sending the email
     breader.is_email_sent = False
     breader.save()
-
+    
     subject = 'Elevate Your Pet Business with a Personalized Website'
-    message = ''
     recipient_list = [breader.email]
+    if breader.user:
+        plain_user = f"Hi {breader.user},"
+    else:
+        plain_user = f"Hi,"
     context = {
         'title': subject,
-        'user': breader.user,
+        'plain_user': plain_user,
         'pet_name': breader.pet_name, 
         'platform': breader.platform,
         'whatsapp_link': whatsapp_link,
@@ -35,7 +48,10 @@ def send_email_view(request, pk):
         'business_name': business_name,
         'developer_name': developer_name
     }
+    txt_template_path = os.path.join('breader.txt')
+    modified_email_content = get_email_content(txt_template_path, context)
     html_message = render_to_string('mail_app/email_templates/breader.html', context)
+    message = modified_email_content
     if breader.status:
         if not breader.is_email_sent:
             send_mail(

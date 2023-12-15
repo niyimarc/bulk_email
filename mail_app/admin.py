@@ -16,6 +16,7 @@ whatsapp_link = os.environ.get('WHATSAPP_LINK')
 whatsapp_number = os.environ.get('WHATSAPP_NUMBER')
 contact_email = os.environ.get('CONTACT_EMAIL')
 from_email = business_name + "<" + get_from_email + ">"
+from .views import get_email_content
 
 class NumberEmailSentFilter(SimpleListFilter):
     title = 'Number of Email Sent'
@@ -60,11 +61,14 @@ class BreaderAdmin(admin.ModelAdmin):
             breader.is_email_sent = False
             breader.save()
             subject = 'Elevate Your Pet Business with a Personalized Website'
-            message = ''
             recipient_list = [breader.email]
+            if breader.user:
+                plain_user = f"Hi {breader.user},"
+            else:
+                plain_user = f"Hi,"
             context = {
                 'title': subject,
-                'user': breader.user,
+                'plain_user': plain_user,
                 'pet_name': breader.pet_name, 
                 'platform': breader.platform,
                 'whatsapp_link': whatsapp_link,
@@ -74,7 +78,10 @@ class BreaderAdmin(admin.ModelAdmin):
                 'business_name': business_name,
                 'developer_name': developer_name
             }
+            txt_template_path = os.path.join('breader.txt')
+            modified_email_content = get_email_content(txt_template_path, context)
             html_message = render_to_string('mail_app/email_templates/breader.html', context)
+            message = modified_email_content
             if breader.status:
                 if not breader.is_email_sent:
                     send_mail(
